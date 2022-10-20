@@ -1,9 +1,15 @@
-                        Google Protocol Buffers 学习笔记
+```text
+                          Google Protocol Buffers 学习笔记
+```
+![](https://itlab1024-1256529903.cos.ap-beijing.myqcloud.com/202210201041617.png)
+
 # 什么是protobuf？
+
 ![](https://itlab1024-1256529903.cos.ap-beijing.myqcloud.com/202210191222930.png)
 protobuf全称Google Protocol Buffers，是一种语言无关、平台无关的针对结构化数据的序列化工具。
 作为Java开发者比较常用的是Java的序列化，但是这个序列化方式只能在Java语言中通信，而protobuf可以实现跨语言。
 另外其实我们可以使用JSON或者XML方式，但是这两种结构导致数据比较大，而protobuf它更小、更快、更简单。
+
 # 如何工作？
 protobuf定义了自己的语言，用户需要根据要求指定自己的文件（.proto结尾），比如如下内容：
 ```protobuf
@@ -19,27 +25,50 @@ message Person {
 比如选择的是java，就会生成Java文件，使用者就可以使用这些文件了。
 # 安装protobuf 编译器
 github地址：https://github.com/protocolbuffers/protobuf#protocol-compiler-installation
-我选择了releases中的all包（包含所支持的所有语言）https://github.com/protocolbuffers/protobuf/releases
-![](https://itlab1024-1256529903.cos.ap-beijing.myqcloud.com/202210191235887.png)
-下载完毕后解压，并执行如下命令：
+我选择了releases中的mac系统的包（包含所支持的所有语言）https://github.com/protocolbuffers/protobuf/releases
+![image-20221020093058572](https://itlab1024-1256529903.cos.ap-beijing.myqcloud.com/202210200930764.png)
+下载完毕后解压，看下结构
+
 ```shell
-➜  protobuf-21.8 ./configure && make && make install
-checking whether to enable maintainer-specific portions of Makefiles... yes
-checking build system type... x86_64-apple-darwin21.6.0
-checking host system type... x86_64-apple-darwin21.6.0
-checking target system type... x86_64-apple-darwin21.6.0
-checking for a BSD-compatible install... /usr/bin/install -c
-checking whether build environment is sane... yes
-checking for a race-free mkdir -p... ./install-sh -c -d
-checking for gawk... no
-checking for mawk... no
-checking for nawk... no
-checking for awk... awk
-......此处省略N个字......
+➜  protoc-21.8-osx-x86_64 pwd
+/Users/itlab/dev-tools/protoc-21.8-osx-x86_64
+➜  protoc-21.8-osx-x86_64 tree .
+.
+├── bin
+│   └── protoc
+├── include
+│   └── google
+│       └── protobuf
+│           ├── any.proto
+│           ├── api.proto
+│           ├── compiler
+│           │   └── plugin.proto
+│           ├── descriptor.proto
+│           ├── duration.proto
+│           ├── empty.proto
+│           ├── field_mask.proto
+│           ├── source_context.proto
+│           ├── struct.proto
+│           ├── timestamp.proto
+│           ├── type.proto
+│           └── wrappers.proto
+└── readme.txt
 ```
-编译时间还稍微有点长！！！喝口水，看看NBA比赛（湖人目前落后勇士18分），耐心等待吧！
-过了N分钟，终于编译完成（此时湖人勇士比分83:100）
-验证是否成功
+bin目录下的protoc就是编译器。
+
+配置环境变量：
+
+修改~/.bash_profile文件
+
+```shell
+export PROTOBUF=/Users/itlab/dev-tools/protoc-21.8-osx-x86_64
+export PATH=$PROTOBUF/bin:$PATH
+```
+
+修改后执行source ~/.bash_profile。
+
+验证
+
 ```shell
 ➜  ~ protoc --version
 libprotoc 3.21.8
@@ -963,3 +992,315 @@ public final class PersonOuterClass {
   // @@protoc_insertion_point(outer_class_scope)
 }
 ```
+# 消息结构说明
+protobuf将定义的数据结构叫做消息，.proto文件的书写是有严格要求的，主要分为proto2和proto3两种语法，我目前就学习proto3。
+## 定义消息类型
+首先看一个官方的例子
+```protobuf
+syntax = "proto3";
+
+message SearchRequest {
+  string query = 1;
+  int32 page_number = 2;
+  int32 result_per_page = 3;
+}
+```
+因为protobuf分为2和3两种，需要通过syntax来指定当前文件使用哪种，如果不写默认是proto2。
+`message`关键字用于定义消息，`SearchRequest`是消息的名字，该消息有三个字段。
+### 指定字段类型
+三个前面的string、int32代表字段类型，protobuf定义了几种类型。
+### 分配字段编号
+字段后面的1、2、3代表的是字段的编号，一个消息内是唯一的。1-15的编号占用一个字节，16-2047的编号占用2个字节。最小字段编号是 1，最大的是 2^29 - 1。
+### 指定字段规则
+在类型之前可以使用规则标识来声明，规则标识有如下几种。
+* singular，这是默认规则，就是说被他修饰的字段只能出现0次或者1次。
+* optional，与singular类似，他有两种状态，如果该字段有值，就会被序列化，否则不会。
+* repeated，字段可以重复0次或者多次出现。
+* map，键值对类型
+### 添加更多消息类型
+一个.proto文件中，可以有多个消息，比如
+```protobuf
+syntax = "proto3";
+message SearchRequest {
+  string query = 1;
+  int32 page_number = 2;
+  int32 result_per_page = 3;
+}
+
+message SearchResponse {
+}
+```
+有两个消息，一个是SearchRequest，另一个是SearchResponse
+### 添加注释
+分为单行和多行注释，属性上一般使用单行，消息体上方一般使用多行。单行使用//,多行使用/*---*/
+```protobuf
+/* SearchRequest represents a search query, with pagination options to
+ * indicate which results to include in the response. */
+syntax = "proto3";
+message SearchRequest {
+  string query = 1;
+  int32 page_number = 2;  // Which page number do we want?
+  int32 result_per_page = 3;  // Number of results to return per page.
+}
+```
+
+## 类型对照表
+
+一下表格列出了proto的类型和各种语言类型的关系。
+
+| .proto Type | Notes                                                        | C++ Type | Java/Kotlin Type[1] | Python Type[3]                  | Go Type | Ruby Type                      | C# Type    | PHP Type          | Dart Type |
+| :---------- | :----------------------------------------------------------- | :------- | :------------------ | :------------------------------ | :------ | :----------------------------- | :--------- | :---------------- | :-------- |
+| double      |                                                              | double   | double              | float                           | float64 | Float                          | double     | float             | double    |
+| float       |                                                              | float    | float               | float                           | float32 | Float                          | float      | float             | double    |
+| int32       | Uses variable-length encoding. Inefficient for encoding negative numbers – if your field is likely to have negative values, use sint32 instead. | int32    | int                 | int                             | int32   | Fixnum or Bignum (as required) | int        | integer           | int       |
+| int64       | Uses variable-length encoding. Inefficient for encoding negative numbers – if your field is likely to have negative values, use sint64 instead. | int64    | long                | int/long[4]                     | int64   | Bignum                         | long       | integer/string[6] | Int64     |
+| uint32      | Uses variable-length encoding.                               | uint32   | int[2]              | int/long[4]                     | uint32  | Fixnum or Bignum (as required) | uint       | integer           | int       |
+| uint64      | Uses variable-length encoding.                               | uint64   | long[2]             | int/long[4]                     | uint64  | Bignum                         | ulong      | integer/string[6] | Int64     |
+| sint32      | Uses variable-length encoding. Signed int value. These more efficiently encode negative numbers than regular int32s. | int32    | int                 | int                             | int32   | Fixnum or Bignum (as required) | int        | integer           | int       |
+| sint64      | Uses variable-length encoding. Signed int value. These more efficiently encode negative numbers than regular int64s. | int64    | long                | int/long[4]                     | int64   | Bignum                         | long       | integer/string[6] | Int64     |
+| fixed32     | Always four bytes. More efficient than uint32 if values are often greater than 228. | uint32   | int[2]              | int/long[4]                     | uint32  | Fixnum or Bignum (as required) | uint       | integer           | int       |
+| fixed64     | Always eight bytes. More efficient than uint64 if values are often greater than 256. | uint64   | long[2]             | int/long[4]                     | uint64  | Bignum                         | ulong      | integer/string[6] | Int64     |
+| sfixed32    | Always four bytes.                                           | int32    | int                 | int                             | int32   | Fixnum or Bignum (as required) | int        | integer           | int       |
+| sfixed64    | Always eight bytes.                                          | int64    | long                | int/long[4]                     | int64   | Bignum                         | long       | integer/string[6] | Int64     |
+| bool        |                                                              | bool     | boolean             | bool                            | bool    | TrueClass/FalseClass           | bool       | boolean           | bool      |
+| string      | A string must always contain UTF-8 encoded or 7-bit ASCII text, and cannot be longer than 232. | string   | String              | str/unicode[5]                  | string  | String (UTF-8)                 | string     | string            | String    |
+| bytes       | May contain any arbitrary sequence of bytes no longer than 232. | string   | ByteString          | str (Python 2) bytes (Python 3) | []byte  | String (ASCII-8BIT)            | ByteString | string            | List      |
+
+## 默认值
+
+- string：默认值是空字符串
+- bytes：默认值是空字节数组
+- bools：默认是false
+- 数字类型：默认是0.
+- enums：枚举类型默认值是第一个定义的枚举值。
+- 消息类型：默认值取决于具体的语言
+
+## 枚举
+
+枚举使用enum声明，必须要有值=0的枚举定义，而且必须放到枚举定义的第一行，类似如下官方代码。
+
+```protobuf
+syntax = "proto3"
+enum Corpus {
+  CORPUS_UNSPECIFIED = 0;
+  CORPUS_UNIVERSAL = 1;
+  CORPUS_WEB = 2;
+  CORPUS_IMAGES = 3;
+  CORPUS_LOCAL = 4;
+  CORPUS_NEWS = 5;
+  CORPUS_PRODUCTS = 6;
+  CORPUS_VIDEO = 7;
+}
+message SearchRequest {
+  string query = 1;
+  int32 page_number = 2;
+  int32 result_per_page = 3;
+  Corpus corpus = 4;
+}
+```
+
+如果枚举中某两个或者多个的值相同，需要使用来声明别名。
+
+```protobuf
+syntax = "proto3"
+enum EnumAllowingAlias {
+  option allow_alias = true;
+  EAA_UNSPECIFIED = 0;
+  EAA_STARTED = 1;
+  EAA_RUNNING = 1;
+  EAA_FINISHED = 2;
+}
+enum EnumNotAllowingAlias {
+  ENAA_UNSPECIFIED = 0;
+  ENAA_STARTED = 1;
+  // ENAA_RUNNING = 1;  // Uncommenting this line will cause a compile error inside Google and a warning message outside.
+  ENAA_FINISHED = 2;
+}
+```
+
+可以看到EAA_STARTED = 1和 EAA_RUNNING = 1的值相同，他俩其实就是相同的，也可以理解为别名。
+
+## 使用其他类型
+一个消息里可以使用另一个消息作为字段类型
+
+```protobuf
+message SearchResponse {
+  repeated Result results = 1;
+}
+
+message Result {
+  string url = 1;
+  string title = 2;
+  repeated string snippets = 3;
+}
+```
+
+Result消息作为了SearchResponse的字段类型。
+
+### 导入消息
+
+如果将上面的两个消息分别放入不同的proto文件中，就得需要导入，导入使用import关键字，具体尝试下。
+
+看如下图，两个文件的结构。
+
+![image-20221019195256890](https://itlab1024-1256529903.cos.ap-beijing.myqcloud.com/202210191952583.png)
+
+右侧是导入，使用的是import "other/Result.proto";
+
+有的时候，可能SearchResponse.proto和Result.proto本来在同一个目录，但是Result后来被移动到了other路径下，此时，要向上面所说的那样使用import "other/Result.proto"; 这样已经定义好的文件要修改，麻烦。这时候可以保留移动前的文件，下图中图2的文件，内容修改一下（修改一个文件跟修改多个文件工作量还是不同的）如下图。
+
+![image-20221019195847367](https://itlab1024-1256529903.cos.ap-beijing.myqcloud.com/202210191958473.png)
+
+此时SearchResponse.proto不需要更改，保持原样。
+
+![image-20221019200111442](https://itlab1024-1256529903.cos.ap-beijing.myqcloud.com/202210192001543.png)
+
+### 使用 proto2 消息类型
+
+可以导入[proto2](https://developers.google.com/protocol-buffers/docs/proto)消息类型并在您的 proto3 消息中使用它们，反之亦然。但是，proto2 枚举不能直接在 proto3 语法中使用（如果导入的 proto2 消息使用它们也没关系）。
+
+## 嵌套消息
+
+消息可以嵌套
+
+```protobuf
+message SearchResponse {
+  message Result {
+    string url = 1;
+    string title = 2;
+    repeated string snippets = 3;
+  }
+  repeated Result results = 1;
+}
+```
+
+其他人如果想使用Result，则需要使用外层消息名.内层消息名。这跟Java的内部类类似。
+
+## 更新消息类型
+
+待更新。。。
+
+# 序列化与发序列化
+
+这里我新建一个protobuf-java的maven项目，需要引入依赖
+
+创建proto消息
+
+```protobuf
+syntax = "proto3";
+
+package com.itlab1024.protobuf;
+
+option java_multiple_files = true;
+// 完整的包名是com.itlab1024.protobuf.proto.java
+option java_package = "java";
+option java_outer_classname = "AddressBookProto";
+
+message Person {
+  optional string name = 1;
+  optional int32 id = 2;
+  optional string email = 3;
+
+  enum PhoneType {
+    MOBILE = 0;
+    HOME = 1;
+    WORK = 2;
+  }
+
+  message PhoneNumber {
+    optional string number = 1;
+    optional PhoneType type = 2;
+  }
+
+  repeated PhoneNumber phones = 4;
+}
+
+message AddressBook {
+  repeated Person people = 1;
+}
+```
+
+使用编译器编译为java。
+
+```shell
+➜  java git:(main) ✗ pwd
+/Users/itlab/workspace/github/protobuf-tutorial/protobuf-java/src/main/java
+➜  java git:(main) ✗ protoc -I=com/itlab1024/protobuf/protos --java_out=. addressbook.proto
+```
+
+编译结果如下：
+
+![image-20221020101102783](https://itlab1024-1256529903.cos.ap-beijing.myqcloud.com/202210201011951.png)
+
+生成了很多java文件。
+
+在maven pom.xml文件中引入protobuf-java等依赖
+
+```xml
+<dependency>
+  <groupId>com.google.protobuf</groupId>
+  <artifactId>protobuf-java</artifactId>
+  <version>3.21.8</version>
+</dependency>
+<dependency>
+  <groupId>com.google.protobuf</groupId>
+  <artifactId>protobuf-java-util</artifactId>
+  <version>3.21.8</version>
+</dependency>
+```
+
+接下来在main方法中进行序列化和反序列化，
+
+```java
+package com.itlab1024.protobuf;
+
+
+import com.google.protobuf.CodedOutputStream;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.itlab1024.protobuf.protos.java.AddressBook;
+import com.itlab1024.protobuf.protos.java.Person;
+
+import java.io.FileOutputStream;
+import java.util.Arrays;
+import java.util.List;
+
+public class Main {
+    public static void main(String[] args) throws InvalidProtocolBufferException {
+        Person person = Person.newBuilder().setId(1).setEmail("itlab1024@163.com")
+                .setName("IT实验室")
+                .addPhones(Person.PhoneNumber.newBuilder().setNumber("13648886666").setType(Person.PhoneType.MOBILE).build()).build();
+        AddressBook addressBook = AddressBook.newBuilder().addPeople(person).build();
+        // 序列化
+        byte[] bytes = addressBook.toByteArray();
+        System.out.println(Arrays.toString(bytes));
+        // 反序列化
+        AddressBook book = AddressBook.parseFrom(bytes);
+        List<Person> peoples = book.getPeopleList();
+        for (Person people : peoples) {
+            System.out.println("姓名：" + people.getName());
+            System.out.println("邮箱：" + people.getEmail());
+            System.out.println("手机号个数：" + people.getPhonesCount());
+        }
+    }
+}
+```
+
+运行结果如下，可以看到序列化和反序列化的结果是能够正确打印出来的
+
+![image-20221020103621897](https://itlab1024-1256529903.cos.ap-beijing.myqcloud.com/202210201036105.png)
+
+# 勾搭交流
+
+* Github
+https://github.com/itlab1024
+
+* 知乎
+https://www.zhihu.com/people/xpp1109
+
+* Java语言交流群
+![](https://itlab1024-1256529903.cos.ap-beijing.myqcloud.com/202208261725809.png)
+* Go语言交流群
+![](https://itlab1024-1256529903.cos.ap-beijing.myqcloud.com/202208260937817.jpeg)
+* 微信公众号
+![](https://itlab1024-1256529903.cos.ap-beijing.myqcloud.com/202208221949217.png)
+* 稀土掘金：https://juejin.cn/user/1473775002718264

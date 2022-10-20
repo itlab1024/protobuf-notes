@@ -1,0 +1,5 @@
+syntax = "proto3";
+import "Result.proto";
+message SearchResponse {
+  repeated Result results = 1;
+}
