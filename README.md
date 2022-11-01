@@ -1,5 +1,5 @@
 ```text
-                                                                    Google Protocol Buffers 学习笔记
+                               Google Protocol Buffers 学习笔记
 ```
 ![](https://itlab1024-1256529903.cos.ap-beijing.myqcloud.com/202210201041617.png)
 
