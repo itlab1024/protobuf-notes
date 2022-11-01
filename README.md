@@ -80,7 +80,7 @@ libprotoc 3.21.8
 ```shell
 ➜  base git:(main) ✗ protoc -I=. --java_out=. person.proto
 ```
--I代表输入 后面的.代表当前路径，--java_out代表使用Java输出，.代表当前路径，person.proto代表protobuf的文件。
+-I代表导入路径(import) 后面的.代表当前路径，--java_out代表使用Java输出，.代表当前路径，person.proto代表protobuf的文件。
 执行完毕后就会看到生成了一个PersonOuterClass.java的文件。
 ![](https://itlab1024-1256529903.cos.ap-beijing.myqcloud.com/202210191307482.png)
 文件内容如下：
